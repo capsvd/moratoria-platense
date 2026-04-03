@@ -76,17 +76,15 @@ if boton_consultar:
             socio_antiguo = int(resultado.iloc[0]['Numero de Socio Antiguo'])
             socio_nuevo = int(resultado.iloc[0]['Posible Nuevo numero de Socio'])
             
-            # --- ACÁ ESTÁ LA MAGIA HACKER: INVERTIMOS LOS CABLES ---
-            # La caja de Deuda Real ahora chupa los datos de la columna Promoción
-            deuda_real = resultado.iloc[0]['Deuda en promoción']
+            # --- CABLES NORMALES DE NUEVO ---
+            deuda_real = resultado.iloc[0]['Deuda Real']
             
             try:
-                # La caja de Promoción ahora chupa los datos de la columna Real
-                deuda_promocion = resultado.iloc[0]['Deuda Real']
+                deuda_promocion = resultado.iloc[0]['Deuda en promoción']
             except KeyError:
-                st.error(f"🚨 ERROR DE LECTURA: No encuentro la columna 'Deuda Real'.")
+                st.error(f"🚨 ERROR DE LECTURA: No encuentro la columna 'Deuda en promoción'.")
                 st.stop()
-            # -------------------------------------------------------
+            # --------------------------------
 
             st.markdown("### 🎫 Estado de tu Carnet")
             col1, col2 = st.columns(2)
