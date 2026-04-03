@@ -29,7 +29,7 @@ try:
 except FileNotFoundError:
     st.error("⚠️ Python no encuentra el archivo 'fondo.png'. Asegurate de que esté en la misma carpeta.")
 
-# --- 2. CSS GENERAL (Letras, Botones y Cajas) ---
+# --- 2. CSS GENERAL (Letras, Botones, Cajas y OCULTAR STREAMLIT) ---
 st.markdown("""
     <style>
     h1, h2, h3, p, span, label, div { color: #F2E3D5 !important; }
@@ -41,6 +41,11 @@ st.markdown("""
     }
     .stButton>button:hover { background-color: #A06B35; color: #FFFFFF !important; }
     .stAlert { background-color: #3E2413; color: #F2E3D5; border: 1px solid #8B5A2B; }
+    
+    /* ACÁ OCULTAMOS LA MARCA DE AGUA DE STREAMLIT */
+    footer {visibility: hidden !important;}
+    [data-testid="stFooter"] {display: none !important;}
+    #MainMenu {visibility: hidden !important;}
     </style>
 """, unsafe_allow_html=True)
 # -----------------------------------------------
@@ -72,11 +77,9 @@ if boton_consultar:
         resultado = df[df['DNI'] == dni_ingresado]
         
         if not resultado.empty:
-            # --- VISTA DE ÉXITO (DNI ENCONTRADO) ---
             socio_antiguo = int(resultado.iloc[0]['Numero de Socio Antiguo'])
             socio_nuevo = int(resultado.iloc[0]['Posible Nuevo numero de Socio'])
             
-            # --- CABLES NORMALES DE NUEVO ---
             deuda_real = resultado.iloc[0]['Deuda Real']
             
             try:
@@ -84,7 +87,6 @@ if boton_consultar:
             except KeyError:
                 st.error(f"🚨 ERROR DE LECTURA: No encuentro la columna 'Deuda en promoción'.")
                 st.stop()
-            # --------------------------------
 
             st.markdown("### 🎫 Estado de tu Carnet")
             col1, col2 = st.columns(2)
@@ -137,7 +139,6 @@ if boton_consultar:
             </div>
             """, unsafe_allow_html=True)
 
-            # --- LOGO DE CIERRE (ÉXITO) ---
             st.markdown("<br><br>", unsafe_allow_html=True)
             col_cierra_vacia1, col_cierra_logo, col_cierra_vacia2 = st.columns([1, 2, 1])
             with col_cierra_logo:
@@ -147,14 +148,12 @@ if boton_consultar:
                     pass
             
         else:
-            # --- VISTA DE ERROR (DNI NO ENCONTRADO / REBOTE) ---
             st.markdown("""
             <div style='background-color:#3E2413; padding:15px; border-radius:8px; border: 1px solid #8B5A2B; color: #F2E3D5;'>
                 ⚠️ No encontramos un socio habilitado para la moratoria con ese DNI. Por favor, contactate en oficina de socios o al siguiente mail <u style='font-weight:bold;'>moras@cap.org.ar</u>
             </div>
             """, unsafe_allow_html=True)
 
-            # --- LOGO DE CIERRE (ERROR) ---
             st.markdown("<br><br>", unsafe_allow_html=True)
             col_rebote_vacia1, col_rebote_logo, col_rebote_vacia2 = st.columns([1, 2, 1])
             with col_rebote_logo:
