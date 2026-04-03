@@ -29,7 +29,7 @@ try:
 except FileNotFoundError:
     st.error("⚠️ Python no encuentra el archivo 'fondo.png'. Asegurate de que esté en la misma carpeta.")
 
-# --- 2. CSS GENERAL (Letras, Botones, Cajas y OCULTAR STREAMLIT) ---
+# --- 2. CSS GENERAL (Letras, Botones, Cajas y FULMINAR GLOBITO DE STREAMLIT) ---
 st.markdown("""
     <style>
     h1, h2, h3, p, span, label, div { color: #F2E3D5 !important; }
@@ -42,10 +42,13 @@ st.markdown("""
     .stButton>button:hover { background-color: #A06B35; color: #FFFFFF !important; }
     .stAlert { background-color: #3E2413; color: #F2E3D5; border: 1px solid #8B5A2B; }
     
-    /* ACÁ OCULTAMOS LA MARCA DE AGUA DE STREAMLIT */
+    /* ACÁ OCULTAMOS EL FOOTER NORMAL */
     footer {visibility: hidden !important;}
     [data-testid="stFooter"] {display: none !important;}
-    #MainMenu {visibility: hidden !important;}
+    header {visibility: hidden !important;}
+    
+    /* BOMBA NUCLEAR PARA EL GLOBITO FLOTANTE EN LA NUBE */
+    [class*="viewerBadge"] {display: none !important; opacity: 0 !important; pointer-events: none !important;}
     </style>
 """, unsafe_allow_html=True)
 # -----------------------------------------------
