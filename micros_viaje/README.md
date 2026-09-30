@@ -15,7 +15,9 @@ Todo corre en Google (Forms + Sheets + Apps Script), no hace falta servidor.
 
 ## Puesta en marcha (unos 10 minutos)
 
-1. **Crear la planilla.** En Google Drive, crear una hoja de cálculo nueva, por ejemplo "Micros socios – Inscripciones".
+1. **Elegir la planilla.** Hay dos opciones:
+   - **Ya tenés el formulario hecho:** usar su hoja de respuestas (en el Form: *Respuestas > Ver en Hojas de cálculo*). El script detecta ese formulario y **no crea otro**. Las preguntas tienen que tener en el título las palabras "Nombre" y "DNI", porque el cruce busca las columnas por nombre.
+   - **Todavía no hay formulario:** crear una hoja de cálculo nueva, por ejemplo "Micros socios – Inscripciones", y el script arma el formulario.
 2. **Pegar el código.** En la planilla: *Extensiones > Apps Script*.
    - Reemplazar el contenido de `Código.gs` por el de [`Codigo.gs`](Codigo.gs).
    - Hacer clic en *+ > HTML*, llamarlo **`Reporte`** (exacto, sin `.html`) y pegar el contenido de [`Reporte.html`](Reporte.html).

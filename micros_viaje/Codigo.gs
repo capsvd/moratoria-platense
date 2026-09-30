@@ -46,6 +46,16 @@ function crearFormulario() {
     return;
   }
 
+  // Si la planilla ya es la de respuestas de un formulario existente, se usa ese.
+  var existente = hojaRespuestas_(ss);
+  if (existente) {
+    props.setProperty('FORM_ID', FormApp.openByUrl(existente.getFormUrl()).getId());
+    crearHojaPadron_(ss);
+    avisar_('Esta planilla ya tiene un formulario vinculado: se usa ese y no se crea uno nuevo.');
+    mostrarLinks();
+    return;
+  }
+
   var form = FormApp.create(CONFIG.TITULO_VIAJE);
   form.setDescription('Inscripción exclusiva para socios del club. ' +
       'Completá tus datos y te vamos a contactar para confirmar tu lugar.')
@@ -87,20 +97,24 @@ function crearFormulario() {
   form.setDestination(FormApp.DestinationType.SPREADSHEET, ss.getId());
   props.setProperty('FORM_ID', form.getId());
 
-  if (!ss.getSheetByName(CONFIG.HOJA_PADRON)) {
-    var padron = ss.insertSheet(CONFIG.HOJA_PADRON);
-    padron.appendRow(['DNI', 'Nombre y apellido', 'Nro de socio', 'Cuota al día']);
-    padron.setFrozenRows(1);
-  }
-
+  crearHojaPadron_(ss);
   mostrarLinks();
 }
 
+function crearHojaPadron_(ss) {
+  if (ss.getSheetByName(CONFIG.HOJA_PADRON)) return;
+  var padron = ss.insertSheet(CONFIG.HOJA_PADRON);
+  padron.appendRow(['DNI', 'Nombre y apellido', 'Nro de socio', 'Cuota al día']);
+  padron.setFrozenRows(1);
+}
+
 function mostrarLinks() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
   var formId = PropertiesService.getScriptProperties().getProperty('FORM_ID');
+  var hojaResp = hojaRespuestas_(ss);
   var lineas = [];
-  if (formId) {
-    var form = FormApp.openById(formId);
+  if (formId || hojaResp) {
+    var form = formId ? FormApp.openById(formId) : FormApp.openByUrl(hojaResp.getFormUrl());
     lineas.push('Formulario para socios: ' + form.getPublishedUrl());
     lineas.push('Editar formulario: ' + form.getEditUrl());
   } else {
