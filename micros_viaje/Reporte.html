@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<style>
+  :root {
+    --bg: #f5eee6;
+    --surface: #fffdfa;
+    --ink: #2b1708;
+    --ink-2: #5e4633;
+    --muted: #8a7462;
+    --line: #e7dacd;
+    --brand: #8b5a2b;
+    --brand-ink: #f2e3d5;
+    --header: #2b1708;
+    --track: #efe4d8;
+    --bar: #8b5a2b;
+    --good: #0ca30c;
+    --warning: #fab219;
+    --critical: #d03b3b;
+    --aviso-bg: #fff4d6;
+    --aviso-line: #e8c56a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17100b;
+      --surface: #221810;
+      --ink: #f2e3d5;
+      --ink-2: #d2bda9;
+      --muted: #a08b79;
+      --line: #3a2a1d;
+      --brand: #c08a52;
+      --brand-ink: #1a120c;
+      --header: #0f0a06;
+      --track: #33251a;
+      --bar: #c08a52;
+      --aviso-bg: #3a2c10;
+      --aviso-line: #7a5f1c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  header { background: var(--header); color: #f2e3d5; padding: 20px 16px; }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  header .wrap { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; justify-content: space-between; }
+  header h1 { margin: 0; font-size: 22px; line-height: 1.2; }
+  header .sub { margin: 4px 0 0; opacity: .8; font-size: 14px; }
+  .actualizar { display: flex; align-items: center; gap: 10px; font-size: 13px; opacity: .95; }
+  button {
+    font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid transparent;
+  }
+  .btn { background: #8b5a2b; color: #f2e3d5; padding: 7px 14px; font-weight: 600; }
+  .btn:hover { background: #a06b35; }
+  .btn[disabled] { opacity: .6; cursor: default; }
+  main { padding: 20px 16px 40px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin-bottom: 16px; }
+  .card h2 { margin: 0 0 12px; font-size: 16px; }
+  .avisos { background: var(--aviso-bg); border: 1px solid var(--aviso-line); border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; font-size: 14px; }
+  .avisos ul { margin: 0; padding-left: 18px; }
+
+  /* Hero */
+  .hero-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+  .hero-num { font-size: 56px; font-weight: 800; line-height: 1; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
+  .hero-label { font-size: 18px; font-weight: 600; }
+  .hero-sub { color: var(--muted); font-size: 13px; margin-top: 6px; }
+  .stack { display: flex; gap: 2px; height: 14px; margin: 16px 0 10px; background: var(--track); border-radius: 4px; overflow: hidden; }
+  .stack .seg { height: 100%; min-width: 0; }
+  .stack .seg:first-child { border-radius: 4px 0 0 4px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--ink-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+  /* Tiles */
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+  .tile { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+  .tile .t-label { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--ink-2); }
+  .tile .t-num { font-size: 36px; font-weight: 800; margin-top: 6px; font-variant-numeric: tabular-nums; }
+  .tile .t-pct { color: var(--muted); font-size: 13px; }
+  .ico { width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: #fff; flex: none; }
+  .ico.al_dia { background: var(--good); }
+  .ico.sin_cuota { background: var(--warning); color: #2b1708; }
+  .ico.no_socio { background: var(--critical); }
+  @media (max-width: 640px) {
+    .tiles { grid-template-columns: 1fr; gap: 8px; }
+    .tile { display: grid; grid-template-columns: 1fr auto; align-items: center; padding: 12px 14px; }
+    .tile .t-num { grid-row: span 2; grid-column: 2; margin: 0; font-size: 30px; }
+    .hero-num { font-size: 46px; }
+  }
+
+  /* Gráfico por día */
+  .chart { display: flex; gap: 8px; }
+  .yaxis { display: flex; flex-direction: column; justify-content: space-between; font-size: 11px; color: var(--muted); text-align: right; height: 180px; font-variant-numeric: tabular-nums; }
+  .plot { flex: 1; min-width: 0; }
+  .bars { position: relative; height: 180px; display: flex; align-items: flex-end; gap: 2px; border-bottom: 1px solid var(--line); }
+  .bars .grid { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--line); pointer-events: none; }
+  .col { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; position: relative; cursor: default; }
+  .col .bar { width: 100%; max-width: 36px; background: var(--bar); border-radius: 4px 4px 0 0; }
+  .col:hover .bar, .col.activa .bar { filter: brightness(1.15); }
+  .col .val { font-size: 11px; font-weight: 700; color: var(--ink); margin-bottom: 2px; font-variant-numeric: tabular-nums; }
+  .xlabels { display: flex; gap: 2px; font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .xlabels span { flex: 1; text-align: center; white-space: nowrap; overflow: visible; }
+  .vacio { color: var(--muted); font-size: 14px; padding: 20px 0; }
+  .tip {
+    position: fixed; z-index: 10; pointer-events: none; background: var(--ink); color: var(--bg);
+    padding: 8px 10px; border-radius: 8px; font-size: 12px; line-height: 1.5; display: none; min-width: 150px;
+    box-shadow: 0 4px 14px rgba(0,0,0,.25);
+  }
+  .tip b { font-size: 13px; }
+  .tip .row { display: flex; justify-content: space-between; gap: 12px; }
+
+  /* Listado */
+  .filtros { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+  .chip { background: transparent; color: var(--ink-2); border-color: var(--line); padding: 5px 12px; font-size: 13px; }
+  .chip.on { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); }
+  .buscar { flex: 1; min-width: 160px; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: inherit; font-size: 14px; }
+  .tabla-wrap { overflow: auto; max-height: 520px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; position: sticky; top: 0; background: var(--surface); }
+  td { padding: 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td.num { font-variant-numeric: tabular-nums; color: var(--ink-2); }
+  .estado { display: inline-flex; align-items: center; gap: 6px; }
+  .estado .ico { width: 16px; height: 16px; font-size: 10px; }
+  .pie { color: var(--muted); font-size: 12px; margin-top: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div>
+      <h1 id="titulo">Inscriptos</h1>
+      <p class="sub">Seguimiento de inscriptos · cruce con el padrón de socios</p>
+    </div>
+    <div class="actualizar">
+      <span id="actualizado"></span>
+      <button class="btn" id="btnActualizar" type="button">Actualizar</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="avisos"></div>
+
+  <section class="card">
+    <div class="hero-top">
+      <span class="hero-num" id="total">0</span>
+      <span class="hero-label">inscriptos</span>
+    </div>
+    <div class="hero-sub" id="heroSub"></div>
+    <div class="stack" id="stack" role="img"></div>
+    <div class="legend" id="leyenda"></div>
+  </section>
+
+  <section class="tiles" id="tiles"></section>
+
+  <section class="card">
+    <h2>Inscripciones por día</h2>
+    <div id="grafico"></div>
+  </section>
+
+  <section class="card" id="cardListado">
+    <h2>Listado de inscriptos</h2>
+    <div class="filtros" id="filtros"></div>
+    <div class="tabla-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Fecha</th><th>Nombre y apellido</th><th>DNI</th><th>Nro socio</th><th>Estado</th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="pie" id="pieListado"></div>
+  </section>
+</main>
+
+<div class="tip" id="tip"></div>
+
+<script>
+  var CLAVE = <?!= claveJson ?>;
+  var datos = <?!= datosIniciales ?>;
+
+  var ESTADOS = {
+    al_dia:    { etiqueta: 'Socios con cuota al día',   corto: 'Cuota al día',      icono: '✓', color: 'var(--good)',     clave: 'alDia' },
+    sin_cuota: { etiqueta: 'Socios sin cuota al día',   corto: 'Sin cuota al día',  icono: '!', color: 'var(--warning)',  clave: 'sinCuota' },
+    no_socio:  { etiqueta: 'No figuran en el padrón',   corto: 'No figura en padrón', icono: '✕', color: 'var(--critical)', clave: 'noSocio' }
+  };
+  var ORDEN = ['al_dia', 'sin_cuota', 'no_socio'];
+  var filtro = 'todos';
+  var busqueda = '';
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function fmt(n) { return Number(n).toLocaleString('es-AR'); }
+  function pct(n, total) { return total ? Math.round(n * 100 / total) + '%' : '0%'; }
+  function ico(estado) { return '<span class="ico ' + estado + '" aria-hidden="true">' + ESTADOS[estado].icono + '</span>'; }
+
+  function render(d) {
+    datos = d;
+    var t = d.totales;
+    $('titulo').textContent = d.titulo;
+    $('actualizado').textContent = 'Actualizado ' + d.actualizado;
+
+    // Avisos
+    $('avisos').innerHTML = d.avisos.length
+      ? '<div class="avisos"><ul>' + d.avisos.map(function (a) { return '<li>' + esc(a) + '</li>'; }).join('') + '</ul></div>'
+      : '';
+
+    // Hero + barra segmentada (sobre el cupo si está configurado)
+    $('total').textContent = fmt(t.inscriptos);
+    var sub = [];
+    if (d.cupo > 0) {
+      var quedan = Math.max(d.cupo - t.inscriptos, 0);
+      sub.push('de ' + fmt(d.cupo) + ' lugares · ' + (quedan ? 'quedan ' + fmt(quedan) : 'cupo completo'));
+    }
+    sub.push('contados una vez por DNI');
+    if (t.duplicados) sub.push(fmt(t.duplicados) + (t.duplicados === 1 ? ' inscripción repetida no se cuenta' : ' inscripciones repetidas no se cuentan'));
+    $('heroSub').textContent = sub.join(' · ');
+
+    var base = Math.max(d.cupo > 0 ? d.cupo : t.inscriptos, t.inscriptos, 1);
+    $('stack').innerHTML = ORDEN.map(function (e) {
+      var n = t[ESTADOS[e].clave];
+      if (!n) return '';
+      return '<div class="seg" style="width:' + (n * 100 / base) + '%;background:' + ESTADOS[e].color + '"></div>';
+    }).join('');
+    $('stack').setAttribute('aria-label', ORDEN.map(function (e) { return ESTADOS[e].etiqueta + ': ' + t[ESTADOS[e].clave]; }).join(', '));
+    $('leyenda').innerHTML = ORDEN.map(function (e) {
+      return '<span><i class="sw" style="background:' + ESTADOS[e].color + '"></i>' + ESTADOS[e].corto + '</span>';
+    }).join('') + (d.cupo > 0 ? '<span><i class="sw" style="background:var(--track)"></i>Lugares libres</span>' : '');
+
+    // Tarjetas
+    $('tiles').innerHTML = ORDEN.map(function (e) {
+      var n = t[ESTADOS[e].clave];
+      return '<div class="tile"><div class="t-label">' + ico(e) + ESTADOS[e].etiqueta + '</div>' +
+        '<div class="t-num">' + fmt(n) + '</div>' +
+        '<div class="t-pct">' + pct(n, t.inscriptos) + ' de los inscriptos</div></div>';
+    }).join('');
+
+    renderGrafico(d.porDia);
+    renderFiltros();
+    renderListado();
+  }
+
+  function renderGrafico(dias) {
+    if (!dias.length) { $('grafico').innerHTML = '<div class="vacio">Todavía no hay inscripciones.</div>'; return; }
+    var max = Math.max.apply(null, dias.map(function (x) { return x.total; }).concat([1]));
+    var tope = max <= 4 ? max : Math.ceil(max / 4) * 4;
+    var iMax = -1, iUlt = dias.length - 1;
+    dias.forEach(function (x, i) { if (iMax === -1 || x.total > dias[iMax].total) iMax = i; });
+    var cadaN = Math.ceil(dias.length / 10);
+
+    var cols = dias.map(function (x, i) {
+      var h = x.total ? Math.max(x.total * 100 / tope, 1.5) : 0;
+      var etiqueta = (i === iMax || i === iUlt) && x.total ? '<span class="val">' + x.total + '</span>' : '';
+      return '<div class="col" data-i="' + i + '">' + etiqueta + '<div class="bar" style="height:' + h + '%"></div></div>';
+    }).join('');
+    var labels = dias.map(function (x, i) {
+      return '<span>' + (i % cadaN === 0 || i === iUlt ? diaCorto(x.fecha) : '') + '</span>';
+    }).join('');
+
+    $('grafico').innerHTML =
+      '<div class="chart"><div class="yaxis"><span>' + tope + '</span><span>' + (tope / 2 % 1 ? '' : tope / 2) + '</span><span>0</span></div>' +
+      '<div class="plot"><div class="bars"><div class="grid" style="top:0"></div><div class="grid" style="top:50%"></div>' + cols + '</div>' +
+      '<div class="xlabels">' + labels + '</div></div></div>';
+
+    var acumulado = [];
+    dias.reduce(function (s, x, i) { acumulado[i] = s + x.total; return acumulado[i]; }, 0);
+    Array.prototype.forEach.call(document.querySelectorAll('.col'), function (col) {
+      col.addEventListener('mouseenter', function (ev) { mostrarTip(col, dias[+col.dataset.i], acumulado[+col.dataset.i], ev); });
+      col.addEventListener('mousemove', function (ev) { moverTip(ev); });
+      col.addEventListener('mouseleave', ocultarTip);
+      col.addEventListener('click', function (ev) { mostrarTip(col, dias[+col.dataset.i], acumulado[+col.dataset.i], ev); });
+    });
+  }
+
+  function diaCorto(iso) { var p = iso.split('-'); return p[2] + '/' + p[1]; }
+
+  function mostrarTip(col, x, acum, ev) {
+    Array.prototype.forEach.call(document.querySelectorAll('.col.activa'), function (c) { c.classList.remove('activa'); });
+    col.classList.add('activa');
+    $('tip').innerHTML = '<b>' + diaCorto(x.fecha) + ' · ' + x.total + ' inscriptos</b>' +
+      ORDEN.map(function (e) {
+        return '<div class="row"><span>' + ESTADOS[e].corto + '</span><span>' + x[ESTADOS[e].clave] + '</span></div>';
+      }).join('') +
+      '<div class="row" style="opacity:.75"><span>Acumulado</span><span>' + acum + '</span></div>';
+    $('tip').style.display = 'block';
+    moverTip(ev);
+  }
+  function moverTip(ev) {
+    var tip = $('tip'), x = ev.clientX + 14, y = ev.clientY + 14;
+    if (x + tip.offsetWidth > window.innerWidth - 8) x = ev.clientX - tip.offsetWidth - 14;
+    if (y + tip.offsetHeight > window.innerHeight - 8) y = ev.clientY - tip.offsetHeight - 14;
+    tip.style.left = Math.max(8, x) + 'px';
+    tip.style.top = Math.max(8, y) + 'px';
+  }
+  function ocultarTip() {
+    $('tip').style.display = 'none';
+    Array.prototype.forEach.call(document.querySelectorAll('.col.activa'), function (c) { c.classList.remove('activa'); });
+  }
+
+  function renderFiltros() {
+    var t = datos.totales;
+    var opciones = [['todos', 'Todos', t.inscriptos]].concat(ORDEN.map(function (e) {
+      return [e, ESTADOS[e].corto, t[ESTADOS[e].clave]];
+    }));
+    $('filtros').innerHTML = opciones.map(function (o) {
+      return '<button type="button" class="chip' + (filtro === o[0] ? ' on' : '') + '" data-f="' + o[0] + '">' + o[1] + ' (' + o[2] + ')</button>';
+    }).join('') + '<input class="buscar" id="buscar" type="search" placeholder="Buscar por nombre o DNI" value="' + esc(busqueda) + '">';
+    Array.prototype.forEach.call(document.querySelectorAll('.chip'), function (b) {
+      b.addEventListener('click', function () { filtro = b.dataset.f; renderFiltros(); renderListado(); });
+    });
+    $('buscar').addEventListener('input', function (ev) { busqueda = ev.target.value; renderListado(); });
+  }
+
+  function renderListado() {
+    if (!datos.listado.length && datos.totales.inscriptos) { $('cardListado').style.display = 'none'; return; }
+    var q = busqueda.trim().toLowerCase();
+    var filas = datos.listado.filter(function (r) {
+      return (filtro === 'todos' || r.estado === filtro) &&
+        (!q || r.nombre.toLowerCase().indexOf(q) !== -1 || r.dni.indexOf(q.replace(/\D/g, '') || '~') !== -1);
+    }).slice().reverse();
+    $('tbody').innerHTML = filas.map(function (r) {
+      return '<tr><td class="num">' + r.n + '</td><td class="num">' + esc(r.fecha) + '</td><td>' + esc(r.nombre) + '</td>' +
+        '<td class="num">' + esc(r.dni) + '</td><td class="num">' + esc(r.nroSocio || '—') + '</td>' +
+        '<td><span class="estado">' + ico(r.estado) + ESTADOS[r.estado].corto + '</span></td></tr>';
+    }).join('') || '<tr><td colspan="6" class="vacio">Sin resultados.</td></tr>';
+    $('pieListado').textContent = 'Mostrando ' + filas.length + ' de ' + datos.listado.length + ' · los más recientes primero. ' +
+      'Teléfono y mail de contacto quedan en la planilla de respuestas.';
+  }
+
+  function refrescar() {
+    var btn = $('btnActualizar');
+    btn.disabled = true; btn.textContent = 'Actualizando…';
+    google.script.run
+      .withSuccessHandler(function (d) { render(d); btn.disabled = false; btn.textContent = 'Actualizar'; })
+      .withFailureHandler(function (err) { btn.disabled = false; btn.textContent = 'Actualizar'; $('actualizado').textContent = 'Error al actualizar: ' + err.message; })
+      .obtenerResumen(CLAVE);
+  }
+
+  $('btnActualizar').addEventListener('click', refrescar);
+  document.addEventListener('scroll', ocultarTip, { passive: true });
+  setInterval(refrescar, 60 * 1000);
+  render(datos);
+</script>
+</body>
+</html>
