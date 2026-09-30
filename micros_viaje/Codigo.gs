@@ -51,8 +51,7 @@ function crearFormulario() {
   if (existente) {
     props.setProperty('FORM_ID', FormApp.openByUrl(existente.getFormUrl()).getId());
     crearHojaPadron_(ss);
-    avisar_('Esta planilla ya tiene un formulario vinculado: se usa ese y no se crea uno nuevo.');
-    mostrarLinks();
+    mostrarLinks('Esta planilla ya tiene un formulario vinculado: se usa ese y no se crea uno nuevo.');
     return;
   }
 
@@ -108,11 +107,12 @@ function crearHojaPadron_(ss) {
   padron.setFrozenRows(1);
 }
 
-function mostrarLinks() {
+/** Muestra los links en un solo cartel (cada cartel frena el script hasta que se acepta). */
+function mostrarLinks(encabezado) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var formId = PropertiesService.getScriptProperties().getProperty('FORM_ID');
   var hojaResp = hojaRespuestas_(ss);
-  var lineas = [];
+  var lineas = typeof encabezado === 'string' ? [encabezado] : [];
   if (formId || hojaResp) {
     var form = formId ? FormApp.openById(formId) : FormApp.openByUrl(hojaResp.getFormUrl());
     lineas.push('Formulario para socios: ' + form.getPublishedUrl());
