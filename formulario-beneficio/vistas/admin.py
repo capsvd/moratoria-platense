@@ -8,7 +8,10 @@ from core.validacion import leer_padron
 marca.aplicar_estilos()
 marca.encabezado("Administración", "Padrón de socios e inscripciones")
 
-clave_configurada = st.secrets.get("admin_password", "")
+try:
+    clave_configurada = st.secrets.get("admin_password", "")
+except FileNotFoundError:  # no hay secrets.toml ni secrets en la nube
+    clave_configurada = ""
 if not clave_configurada:
     marca.caja("Falta configurar <b>admin_password</b> en los secrets de la app.", "error")
     st.stop()
