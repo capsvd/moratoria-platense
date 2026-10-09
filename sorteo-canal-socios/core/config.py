@@ -5,6 +5,7 @@ from pathlib import Path
 
 import streamlit as st
 
+from core import contenido
 from core.almacenamiento import ZONA, AlmacenLocal, AlmacenSheets
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -27,8 +28,8 @@ def obtener_almacen():
 
 
 def cierre_sorteo() -> datetime | None:
-    """Fecha y hora (Buenos Aires) en que se cierra la inscripción, si está configurada."""
-    valor = secret("cierre", "")
+    """Fecha y hora (Buenos Aires) en que se cierra la inscripción; el secret "cierre" pisa el valor del sorteo."""
+    valor = secret("cierre", "") or contenido.CIERRE_INSCRIPCION
     if not valor:
         return None
     return datetime.strptime(valor, "%Y-%m-%d %H:%M").replace(tzinfo=ZONA)

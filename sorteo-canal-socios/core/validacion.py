@@ -1,6 +1,5 @@
-"""Normalización y validación de los datos del formulario y del padrón de socios."""
+"""Normalización y validación de los datos del formulario."""
 
-import io
 import re
 
 import pandas as pd
@@ -39,26 +38,6 @@ def mail_valido(valor: str) -> bool:
 
 def nombre_valido(valor: str) -> bool:
     return len(re.sub(r"[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ]", "", valor or "")) >= 3
-
-
-def leer_padron(nombre_archivo: str, contenido: bytes) -> set[str]:
-    """Lee un .xlsx/.xls/.csv/.txt con DNIs y devuelve el conjunto normalizado.
-
-    Toma cualquier celda que, normalizada, tenga 7 u 8 dígitos; así ignora
-    encabezados como "DNI" y funciona con o sin columna nombrada.
-    """
-    nombre = nombre_archivo.lower()
-    if nombre.endswith((".xlsx", ".xls")):
-        hojas = pd.read_excel(io.BytesIO(contenido), header=None, dtype=str, sheet_name=None)
-        celdas = [v for df in hojas.values() for v in df.to_numpy().ravel()]
-    elif nombre.endswith((".csv", ".txt")):
-        texto = contenido.decode("utf-8-sig", errors="ignore")
-        celdas = re.split(r"[\s,;]+", texto)
-    else:
-        raise ValueError("Formato no soportado. Usá .xlsx, .csv o .txt")
-
-    dnis = {normalizar_dni(c) for c in celdas}
-    return {d for d in dnis if 7 <= len(d) <= 8}
 
 
 def validar_participacion(datos: dict) -> list[str]:

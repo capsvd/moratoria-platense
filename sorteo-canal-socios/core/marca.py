@@ -132,7 +132,8 @@ def aplicar_estilos() -> None:
         }}
         .cap-tarjeta ul li::before {{ font-size: 0.7rem; min-width: 1rem; transform: translateY(-0.1rem); }}
         .cap-tarjeta p {{ margin: 0; }}
-        .cap-tarjeta .destacado {{ color: {DORADO}; font-weight: 600; }}
+        .cap-tarjeta .destacado, .cap-caja .destacado {{ color: {DORADO} !important; font-weight: 600; }}
+        .cap-tarjeta p + p {{ margin-top: 0.6rem; }}
         .cap-canal {{
             display: inline-block; margin-top: 0.9rem; padding: 0.55rem 1rem; border: 1px solid {DORADO};
             border-radius: 4px; color: {DORADO} !important; text-decoration: none !important;

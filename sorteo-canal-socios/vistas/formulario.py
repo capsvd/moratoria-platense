@@ -7,6 +7,7 @@ from core import contenido as c
 from core import marca
 from core.almacenamiento import ZONA
 from core.config import cierre_sorteo, obtener_almacen, secret
+from core.socios import describir_meses, meses_adeudados, nombre_mes
 from core.validacion import normalizar_dni, validar_participacion
 
 marca.aplicar_estilos()
@@ -20,7 +21,7 @@ boton_canal = (
 )
 marca.tarjeta(c.PREMIOS_TITULO, marca.lista(c.PREMIOS))
 marca.tarjeta(c.REQUISITOS_TITULO, f"<p>{escape(c.REQUISITOS_INTRO)}</p>{marca.lista(c.REQUISITOS, numerada=True)}{boton_canal}")
-marca.tarjeta(c.ANUNCIO_TITULO, f"<p>{escape(c.ANUNCIO)}</p>")
+marca.tarjeta(c.ANUNCIO_TITULO, f"<p>{escape(c.ANUNCIO)}</p><p class='destacado'>{escape(c.FECHA_LIMITE)}</p>")
 
 cierre = cierre_sorteo()
 if cierre and datetime.now(ZONA) >= cierre:
@@ -28,8 +29,10 @@ if cierre and datetime.now(ZONA) >= cierre:
     st.stop()
 
 if st.session_state.get("participacion_ok"):
+    nombre_ok, con_debito = st.session_state["participacion_ok"]
+    doble = f"<br><b class='destacado'>{escape(c.DOBLE_CHANCE)}</b>" if con_debito else ""
     marca.caja(
-        f"<b>¡Listo, {escape(st.session_state['participacion_ok'])}! Ya estás participando.</b><br>"
+        f"<b>¡Listo, {escape(nombre_ok)}! Ya estás participando.</b>{doble}<br>"
         f"{escape(c.ANUNCIO)} ¡Mucha suerte! 🤎",
     )
     if st.button("Anotar a otra persona", width="stretch"):
@@ -62,15 +65,28 @@ if enviado:
     padron = almacen.cargar_padron()
     if not padron:
         marca.caja("<b>El sorteo todavía no está habilitado.</b><br>Probá de nuevo en un rato.", "error")
-    elif normalizar_dni(dni) not in padron:
+    elif (socio := padron.get(normalizar_dni(dni))) is None:
         marca.caja(
             "<b>No estás apto/a como socio/a para participar del sorteo.</b><br>"
             "Tu DNI no figura en el padrón de socios. Si creés que es un error, acercate a la oficina de Socios.",
             "error",
         )
+    elif socio.ultima_cuota is None:
+        marca.caja(
+            "<b>No estás apto/a para participar.</b><br>"
+            f"No encontramos pagos registrados a tu nombre. Para participar tenés que tener paga la cuota de "
+            f"{nombre_mes(c.MES_REQUERIDO)}; acercate a la oficina de Socios.",
+            "error",
+        )
+    elif adeudados := meses_adeudados(socio, c.MES_REQUERIDO):
+        marca.caja(
+            "<b>No estás apto/a para participar ya que registrás los siguientes meses adeudados:</b><br>"
+            f"{escape(describir_meses(adeudados))}.<br>Podés regularizar tu cuota en la oficina de Socios.",
+            "error",
+        )
     elif almacen.ya_participa(dni):
         marca.caja("<b>Ya estás participando del sorteo con este DNI.</b><br>No hace falta que te anotes de nuevo.")
     else:
-        almacen.guardar_participante(datos)
-        st.session_state["participacion_ok"] = nombre.strip().split()[0]
+        almacen.guardar_participante(datos, socio)
+        st.session_state["participacion_ok"] = (nombre.strip().split()[0], socio.debito)
         st.rerun()

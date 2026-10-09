@@ -2,7 +2,7 @@
 
 La planilla tiene dos hojas que la app crea si no existen:
 - "Participantes": una fila por persona anotada.
-- "Padron": columna A con los DNIs de socios; C2 guarda la fecha de la última carga.
+- "Padron": DNI, última cuota paga (AAAA-MM) y débito automático; E2 guarda la fecha de la última carga.
 
 Sin credenciales de Google (prueba local) usa archivos en data/.
 """
@@ -16,12 +16,13 @@ from zoneinfo import ZoneInfo
 
 import pandas as pd
 
+from core.socios import Socio
 from core.validacion import normalizar_dni, normalizar_telefono
 
 ZONA = ZoneInfo("America/Argentina/Buenos_Aires")
 HOJA_PARTICIPANTES = "Participantes"
 HOJA_PADRON = "Padron"
-ENCABEZADO_PADRON = ["DNI", "", "Actualizado"]
+ENCABEZADO_PADRON = ["DNI", "Última cuota paga", "Débito automático", "", "Actualizado"]
 CACHE_PADRON_SEG = 120
 
 ENCABEZADOS = [
@@ -31,6 +32,8 @@ ENCABEZADOS = [
     "WhatsApp",
     "Mail",
     "Sigue el canal",
+    "Débito automático",
+    "Chances",
 ]
 COLUMNA_DNI = ENCABEZADOS.index("DNI") + 1
 
@@ -39,7 +42,28 @@ def _ahora() -> str:
     return datetime.now(ZONA).strftime("%Y-%m-%d %H:%M")
 
 
-def armar_fila(datos: dict) -> list[str]:
+def _mes_a_texto(mes) -> str:
+    return f"{mes[0]:04d}-{mes[1]:02d}" if mes else ""
+
+
+def _texto_a_mes(texto: str):
+    try:
+        anio, mes = texto.split("-")
+        return (int(anio), int(mes))
+    except ValueError:
+        return None
+
+
+def _fila_padron(dni: str, socio: Socio) -> list[str]:
+    return [dni, _mes_a_texto(socio.ultima_cuota), "Sí" if socio.debito else "No"]
+
+
+def _socio_de_fila(fila: list[str]) -> Socio:
+    fila = list(fila) + ["", "", ""]
+    return Socio(ultima_cuota=_texto_a_mes(fila[1]), debito=fila[2] == "Sí")
+
+
+def armar_fila(datos: dict, socio: Socio) -> list[str]:
     return [
         _ahora(),
         datos["nombre"].strip(),
@@ -47,6 +71,8 @@ def armar_fila(datos: dict) -> list[str]:
         normalizar_telefono(datos["whatsapp"]),
         datos["mail"].strip().lower(),
         "Sí",
+        "Sí" if socio.debito else "No",
+        "2" if socio.debito else "1",
     ]
 
 
@@ -59,7 +85,7 @@ def _excel(df: pd.DataFrame) -> bytes:
 class AlmacenSheets:
     def __init__(self, planilla):
         self.planilla = planilla
-        self._padron: set[str] | None = None
+        self._padron: dict[str, Socio] | None = None
         self._padron_leido = 0.0
 
     @classmethod
@@ -83,34 +109,34 @@ class AlmacenSheets:
             hoja.update([encabezado], "A1")
             return hoja
 
-    def cargar_padron(self) -> set[str]:
+    def cargar_padron(self) -> dict[str, Socio]:
         if self._padron is None or time.monotonic() - self._padron_leido > CACHE_PADRON_SEG:
-            valores = self._hoja(HOJA_PADRON, ENCABEZADO_PADRON).col_values(1)[1:]
-            self._padron = {normalizar_dni(v) for v in valores} - {""}
+            filas = self._hoja(HOJA_PADRON, ENCABEZADO_PADRON).get_all_values()[1:]
+            self._padron = {normalizar_dni(f[0]): _socio_de_fila(f) for f in filas if f and normalizar_dni(f[0])}
             self._padron_leido = time.monotonic()
         return self._padron
 
     def padron_actualizado(self) -> str | None:
-        return self._hoja(HOJA_PADRON, ENCABEZADO_PADRON).acell("C2").value or None
+        return self._hoja(HOJA_PADRON, ENCABEZADO_PADRON).acell("E2").value or None
 
-    def guardar_padron(self, dnis: set[str]) -> None:
+    def guardar_padron(self, socios: dict[str, Socio]) -> None:
         hoja = self._hoja(HOJA_PADRON, ENCABEZADO_PADRON)
         filas = [ENCABEZADO_PADRON]
-        for i, dni in enumerate(sorted(dnis)):
-            filas.append([dni, "", _ahora()] if i == 0 else [dni, "", ""])
+        for i, dni in enumerate(sorted(socios)):
+            filas.append(_fila_padron(dni, socios[dni]) + ["", _ahora() if i == 0 else ""])
         hoja.clear()
-        hoja.resize(rows=len(filas), cols=3)
+        hoja.resize(rows=len(filas), cols=len(ENCABEZADO_PADRON))
         hoja.update(filas, "A1", value_input_option="RAW")
-        self._padron = set(dnis)
+        self._padron = dict(socios)
         self._padron_leido = time.monotonic()
 
     def ya_participa(self, dni: str) -> bool:
         hoja = self._hoja(HOJA_PARTICIPANTES, ENCABEZADOS)
         return normalizar_dni(dni) in set(hoja.col_values(COLUMNA_DNI)[1:])
 
-    def guardar_participante(self, datos: dict) -> None:
+    def guardar_participante(self, datos: dict, socio: Socio) -> None:
         # RAW deja DNI y teléfonos como texto: sin notación científica ni ceros perdidos
-        self._hoja(HOJA_PARTICIPANTES, ENCABEZADOS).append_row(armar_fila(datos), value_input_option="RAW")
+        self._hoja(HOJA_PARTICIPANTES, ENCABEZADOS).append_row(armar_fila(datos, socio), value_input_option="RAW")
 
     def leer_participantes(self) -> pd.DataFrame:
         valores = self._hoja(HOJA_PARTICIPANTES, ENCABEZADOS).get_all_values()
@@ -129,22 +155,27 @@ class AlmacenLocal:
 
     def __init__(self, carpeta: Path):
         self.carpeta = carpeta
-        self.padron = carpeta / "padron_socios.txt"
+        self.padron = carpeta / "padron_socios.csv"
         self.participantes = carpeta / "participantes.csv"
 
-    def cargar_padron(self) -> set[str]:
+    def cargar_padron(self) -> dict[str, Socio]:
         if not self.padron.exists():
-            return set()
-        return set(self.padron.read_text(encoding="utf-8").split())
+            return {}
+        with self.padron.open(newline="", encoding="utf-8") as f:
+            filas = list(csv.reader(f))[1:]
+        return {f[0]: _socio_de_fila(f) for f in filas if f}
 
     def padron_actualizado(self) -> str | None:
         if not self.padron.exists():
             return None
         return datetime.fromtimestamp(self.padron.stat().st_mtime, ZONA).strftime("%Y-%m-%d %H:%M")
 
-    def guardar_padron(self, dnis: set[str]) -> None:
+    def guardar_padron(self, socios: dict[str, Socio]) -> None:
         self.carpeta.mkdir(exist_ok=True)
-        self.padron.write_text("\n".join(sorted(dnis)), encoding="utf-8")
+        with self.padron.open("w", newline="", encoding="utf-8") as f:
+            escritor = csv.writer(f)
+            escritor.writerow(ENCABEZADO_PADRON[:3])
+            escritor.writerows(_fila_padron(dni, socios[dni]) for dni in sorted(socios))
 
     def leer_participantes(self) -> pd.DataFrame:
         if not self.participantes.exists():
@@ -154,14 +185,14 @@ class AlmacenLocal:
     def ya_participa(self, dni: str) -> bool:
         return normalizar_dni(dni) in set(self.leer_participantes()["DNI"].fillna(""))
 
-    def guardar_participante(self, datos: dict) -> None:
+    def guardar_participante(self, datos: dict, socio: Socio) -> None:
         self.carpeta.mkdir(exist_ok=True)
         nuevo = not self.participantes.exists()
         with self.participantes.open("a", newline="", encoding="utf-8") as f:
             escritor = csv.writer(f)
             if nuevo:
                 escritor.writerow(ENCABEZADOS)
-            escritor.writerow(armar_fila(datos))
+            escritor.writerow(armar_fila(datos, socio))
 
     def participantes_excel(self) -> bytes:
         return _excel(self.leer_participantes())

@@ -23,9 +23,16 @@ REQUISITOS = [
 ]
 
 ANUNCIO_TITULO = "📅 ¿Cuándo se anuncia el ganador?"
-ANUNCIO = "El ganador del sorteo se anunciará el Miércoles 13/10 a las 20:00hs en el canal."
+ANUNCIO = "El ganador del sorteo se anunciará el Miércoles 14/10 a las 20:00hs en el canal."
+FECHA_LIMITE = "Podés anotarte hasta el Miércoles 14/10 a las 19:00hs."
 
 CIERRE = "Completá el formulario con tus datos para participar. ¡Mucha suerte! 🤎"
 
 CHECK_CANAL = 'Sigo el canal de WhatsApp "Socios Club Atlético Platense".'
 BOTON_ENVIAR = "Participar del sorteo"
+
+# Reglas del sorteo
+CIERRE_INSCRIPCION = "2026-10-14 19:00"  # hora de Buenos Aires; el secret "cierre" lo reemplaza
+MES_REQUERIDO = (2026, 10)  # hay que tener paga la cuota de este mes (o una posterior)
+
+DOBLE_CHANCE = "Por estar adherido/a al débito automático, tenés doble chance de ganar."

@@ -2,6 +2,7 @@ import gspread
 import pytest
 
 from core.almacenamiento import ENCABEZADOS, AlmacenLocal, AlmacenSheets
+from core.socios import Socio
 
 DATOS = {
     "nombre": " Juana Pérez ",
@@ -67,19 +68,22 @@ def almacen(request, tmp_path):
     return AlmacenLocal(tmp_path)
 
 
+PADRON = {"30123456": Socio((2026, 10), True), "7123456": Socio((2026, 8), False), "25340493": Socio(None, False)}
+
+
 def test_padron_vacio_al_inicio(almacen):
-    assert almacen.cargar_padron() == set()
+    assert almacen.cargar_padron() == {}
 
 
 def test_guardar_y_cargar_padron(almacen):
-    almacen.guardar_padron({"30123456", "7123456"})
-    assert almacen.cargar_padron() == {"30123456", "7123456"}
+    almacen.guardar_padron(PADRON)
+    assert almacen.cargar_padron() == PADRON
     assert almacen.padron_actualizado()
 
 
 def test_participante_normalizado_y_duplicado(almacen):
     assert not almacen.ya_participa("30123456")
-    almacen.guardar_participante(DATOS)
+    almacen.guardar_participante(DATOS, Socio((2026, 10), True))
     assert almacen.ya_participa("30.123.456")
     df = almacen.leer_participantes()
     assert list(df.columns) == ENCABEZADOS
@@ -90,19 +94,19 @@ def test_participante_normalizado_y_duplicado(almacen):
         "5491123456789",
         "juana@mail.com",
     )
-    assert fila["Sigue el canal"] == "Sí"
+    assert (fila["Sigue el canal"], fila["Débito automático"], fila["Chances"]) == ("Sí", "Sí", "2")
     assert almacen.participantes_excel()[:2] == b"PK"
 
 
 def test_sheets_crea_hojas_con_encabezado():
     planilla = PlanillaFalsa()
-    AlmacenSheets(planilla).guardar_participante(DATOS)
+    AlmacenSheets(planilla).guardar_participante(DATOS, Socio((2026, 11), False))
     assert planilla.hojas["Participantes"].celdas[0] == ENCABEZADOS
 
 
 def test_sheets_reemplaza_padron_anterior():
     almacen = AlmacenSheets(PlanillaFalsa())
-    almacen.guardar_padron({"30123456"})
-    almacen.guardar_padron({"25340493"})
+    almacen.guardar_padron({"30123456": Socio((2026, 10), False)})
+    almacen.guardar_padron({"25340493": Socio((2026, 9), True)})
     almacen._padron = None  # forzar lectura desde la hoja
-    assert almacen.cargar_padron() == {"25340493"}
+    assert almacen.cargar_padron() == {"25340493": Socio((2026, 9), True)}
