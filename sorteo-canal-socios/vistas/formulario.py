@@ -61,8 +61,12 @@ if enviado:
         marca.caja("<b>Revisá estos datos:</b><br>" + "<br>".join(f"• {escape(e)}" for e in errores), "error")
         st.stop()
 
-    almacen = obtener_almacen()
-    padron = almacen.cargar_padron()
+    try:
+        almacen = obtener_almacen()
+        padron = almacen.cargar_padron()
+    except Exception:  # Google caído o sin cuota: que la persona pueda reintentar
+        marca.caja("<b>Hay muchas personas anotándose en este momento.</b><br>Esperá un minuto y volvé a tocar el botón.", "error")
+        st.stop()
     if not padron:
         marca.caja("<b>El sorteo todavía no está habilitado.</b><br>Probá de nuevo en un rato.", "error")
     elif (socio := padron.get(normalizar_dni(dni))) is None:
@@ -87,6 +91,10 @@ if enviado:
     elif almacen.ya_participa(dni):
         marca.caja("<b>Ya estás participando del sorteo con este DNI.</b><br>No hace falta que te anotes de nuevo.")
     else:
-        almacen.guardar_participante(datos, socio)
+        try:
+            almacen.guardar_participante(datos, socio)
+        except Exception:
+            marca.caja("<b>No pudimos guardar tu participación.</b><br>Esperá un minuto y volvé a tocar el botón.", "error")
+            st.stop()
         st.session_state["participacion_ok"] = (nombre.strip().split()[0], socio.debito)
         st.rerun()

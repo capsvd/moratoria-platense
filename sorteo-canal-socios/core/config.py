@@ -1,5 +1,6 @@
 """Lectura de secrets y elección del almacenamiento."""
 
+import json
 from datetime import datetime
 from pathlib import Path
 
@@ -18,9 +19,18 @@ def secret(clave: str, por_defecto=None):
         return por_defecto
 
 
+def credenciales_google() -> dict | None:
+    """El JSON de la cuenta de servicio, pegado tal cual (gcp_service_account_json) o como tabla TOML."""
+    texto = secret("gcp_service_account_json", "")
+    if texto:
+        return json.loads(texto)
+    tabla = secret("gcp_service_account")
+    return dict(tabla) if tabla else None
+
+
 @st.cache_resource
 def obtener_almacen():
-    credenciales = secret("gcp_service_account")
+    credenciales = credenciales_google()
     sheets = secret("sheets")
     if credenciales and sheets and sheets.get("spreadsheet_id"):
         return AlmacenSheets.desde_credenciales(credenciales, sheets["spreadsheet_id"])

@@ -9,6 +9,7 @@ Sin credenciales de Google (prueba local) usa archivos en data/.
 
 import csv
 import io
+import threading
 import time
 from datetime import datetime
 from pathlib import Path
@@ -24,6 +25,7 @@ HOJA_PARTICIPANTES = "Participantes"
 HOJA_PADRON = "Padron"
 ENCABEZADO_PADRON = ["DNI", "Última cuota paga", "Débito automático", "", "Actualizado"]
 CACHE_PADRON_SEG = 120
+CACHE_PARTICIPANTES_SEG = 60
 
 ENCABEZADOS = [
     "Fecha",
@@ -83,16 +85,26 @@ def _excel(df: pd.DataFrame) -> bytes:
 
 
 class AlmacenSheets:
+    """Pensado para picos de inscripciones: Google acepta unas 60 lecturas y 60 escrituras por minuto.
+
+    Guarda en memoria las hojas, el padrón y los DNIs ya anotados, así cada inscripción hace una sola
+    escritura; si Google igual frena por cuota, el cliente reintenta con espera creciente.
+    """
+
     def __init__(self, planilla):
         self.planilla = planilla
+        self._hojas: dict = {}
         self._padron: dict[str, Socio] | None = None
         self._padron_leido = 0.0
+        self._anotados: set[str] | None = None
+        self._anotados_leido = 0.0
+        self._lock = threading.Lock()
 
     @classmethod
     def desde_credenciales(cls, credenciales: dict, spreadsheet_id: str) -> "AlmacenSheets":
         import gspread
 
-        cliente = gspread.service_account_from_dict(dict(credenciales))
+        cliente = gspread.service_account_from_dict(dict(credenciales), http_client=gspread.BackOffHTTPClient)
         return cls(cliente.open_by_key(spreadsheet_id))
 
     @property
@@ -102,12 +114,14 @@ class AlmacenSheets:
     def _hoja(self, nombre: str, encabezado: list[str]):
         import gspread
 
-        try:
-            return self.planilla.worksheet(nombre)
-        except gspread.WorksheetNotFound:
-            hoja = self.planilla.add_worksheet(title=nombre, rows=1000, cols=len(encabezado))
-            hoja.update([encabezado], "A1")
-            return hoja
+        if nombre not in self._hojas:
+            try:
+                self._hojas[nombre] = self.planilla.worksheet(nombre)
+            except gspread.WorksheetNotFound:
+                hoja = self.planilla.add_worksheet(title=nombre, rows=1000, cols=len(encabezado))
+                hoja.update([encabezado], "A1")
+                self._hojas[nombre] = hoja
+        return self._hojas[nombre]
 
     def cargar_padron(self) -> dict[str, Socio]:
         if self._padron is None or time.monotonic() - self._padron_leido > CACHE_PADRON_SEG:
@@ -130,13 +144,22 @@ class AlmacenSheets:
         self._padron = dict(socios)
         self._padron_leido = time.monotonic()
 
+    def _dnis_anotados(self) -> set[str]:
+        if self._anotados is None or time.monotonic() - self._anotados_leido > CACHE_PARTICIPANTES_SEG:
+            self._anotados = set(self._hoja(HOJA_PARTICIPANTES, ENCABEZADOS).col_values(COLUMNA_DNI)[1:])
+            self._anotados_leido = time.monotonic()
+        return self._anotados
+
     def ya_participa(self, dni: str) -> bool:
-        hoja = self._hoja(HOJA_PARTICIPANTES, ENCABEZADOS)
-        return normalizar_dni(dni) in set(hoja.col_values(COLUMNA_DNI)[1:])
+        with self._lock:
+            return normalizar_dni(dni) in self._dnis_anotados()
 
     def guardar_participante(self, datos: dict, socio: Socio) -> None:
+        fila = armar_fila(datos, socio)
         # RAW deja DNI y teléfonos como texto: sin notación científica ni ceros perdidos
-        self._hoja(HOJA_PARTICIPANTES, ENCABEZADOS).append_row(armar_fila(datos, socio), value_input_option="RAW")
+        self._hoja(HOJA_PARTICIPANTES, ENCABEZADOS).append_row(fila, value_input_option="RAW")
+        with self._lock:
+            self._dnis_anotados().add(fila[COLUMNA_DNI - 1])
 
     def leer_participantes(self) -> pd.DataFrame:
         valores = self._hoja(HOJA_PARTICIPANTES, ENCABEZADOS).get_all_values()

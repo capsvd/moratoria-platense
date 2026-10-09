@@ -40,39 +40,57 @@ Todos los textos del sorteo (título, premios, requisitos, fecha del anuncio, bo
 `core/contenido.py`, junto con las reglas: hora de cierre (`CIERRE_INSCRIPCION`) y mes de cuota
 exigido (`MES_REQUERIDO`). Para otra edición del sorteo alcanza con cambiar ese archivo.
 
-## Google Sheets
+## Publicar (paso a paso)
 
-La app usa una planilla con dos hojas que crea sola si no existen:
+Las respuestas se escriben en una **planilla de Google Sheets** con dos hojas que la app crea sola:
 
 | Hoja | Contenido |
 | --- | --- |
 | `Participantes` | Una fila por persona: fecha, nombre y apellido, DNI, WhatsApp, mail, sigue el canal, débito automático, chances (1 o 2) |
 | `Padron` | DNI, última cuota paga (AAAA-MM), débito automático; E2 con la fecha de la última carga |
 
-Configuración (una vez):
+### 1. Planilla y cuenta de servicio de Google (una vez)
 
-1. En [Google Cloud Console](https://console.cloud.google.com/) crear un proyecto y habilitar
-   **Google Sheets API**.
-2. Crear una cuenta de servicio y descargar su clave en formato JSON.
-3. Crear una planilla vacía y **compartirla como Editor** con el mail de la cuenta de servicio.
-4. Copiar el ID de la planilla (la parte de la URL entre `/d/` y `/edit`).
-5. Completar los secrets (ver `.streamlit/secrets.toml.example`).
+1. En Google Drive crear una planilla vacía (por ejemplo "Sorteo Canal Socios") y copiar su ID:
+   la parte de la URL entre `/d/` y `/edit`.
+2. En [Google Cloud Console](https://console.cloud.google.com/) crear un proyecto.
+3. *APIs y servicios → Biblioteca* → buscar **Google Sheets API** → **Habilitar**.
+4. *IAM y administración → Cuentas de servicio* → **Crear cuenta de servicio** (un nombre, sin roles).
+5. Entrar a la cuenta creada → pestaña **Claves** → *Agregar clave → Crear clave nueva → JSON*.
+   Se descarga un archivo `.json`: guardarlo, es la llave de acceso.
+6. Volver a la planilla → **Compartir** → pegar el `client_email` que figura en el JSON
+   (`...@...iam.gserviceaccount.com`) con permiso de **Editor**.
+
+### 2. Streamlit Community Cloud
+
+1. Entrar a [share.streamlit.io](https://share.streamlit.io) con la cuenta de GitHub.
+2. **Create app → Deploy a public app from GitHub**: elegir el repo, la rama y en *Main file path* `app.py`
+   (o la ruta a `app.py` si el proyecto está dentro de una carpeta). Elegir la URL de la app.
+3. En **Advanced settings → Secrets** pegar los secrets (modelo en `.streamlit/secrets.toml.example`):
+   `admin_password`, `link_canal` (opcional), `gcp_service_account_json` con el archivo JSON pegado tal cual
+   entre `'''` y `'''`, y `[sheets] spreadsheet_id`.
+4. **Deploy**.
+
+### 3. Antes de anunciarlo
+
+1. Entrar a `<url de la app>/admin` con la clave: tiene que decir "Los datos se guardan en Google Sheets".
+2. Subir el padrón y revisar el resumen (socios, octubre pago, débito).
+3. Anotarse con un DNI propio y ver que aparezca la fila en la hoja `Participantes`; después borrarla.
+4. Las apps gratuitas se "duermen" tras varias horas sin visitas: abrir el link un rato antes del anuncio.
 
 | Secret | Obligatorio | Para qué |
 | --- | --- | --- |
 | `admin_password` | Sí | Clave de `/admin` |
-| `[sheets] spreadsheet_id` y `[gcp_service_account]` | Sí, para publicar | Guardar en Google Sheets |
+| `gcp_service_account_json` y `[sheets] spreadsheet_id` | Sí, para publicar | Guardar en Google Sheets (también acepta `[gcp_service_account]` como tabla) |
 | `link_canal` | No | Muestra el botón "Seguir el canal en WhatsApp" |
 | `cierre` | No | Cambia el cierre (por defecto `2026-10-14 19:00`, hora de Buenos Aires) |
 
 Sin credenciales de Google la app funciona en **modo prueba** guardando en `data/` (la página de
 admin lo avisa). No publicar en ese modo: el disco de Streamlit Cloud se borra al reiniciar.
 
-## Publicar en Streamlit Community Cloud
-
-1. New app → este repo → *Main file path*: `app.py`.
-2. En *Settings → Secrets* pegar los secrets.
-3. Entrar a `/admin`, subir el padrón y tocar "Reemplazar padrón con este archivo".
+Picos de inscripciones: Google acepta unas 60 escrituras por minuto por cuenta de servicio. La app hace
+una sola escritura por inscripción, mantiene padrón y anotados en memoria y reintenta sola si Google
+la frena; si aun así falla, le pide a la persona que espere un minuto y vuelva a tocar el botón.
 
 ## Correr local
 

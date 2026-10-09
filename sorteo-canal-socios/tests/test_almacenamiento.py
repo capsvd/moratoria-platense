@@ -18,6 +18,7 @@ class HojaFalsa:
 
     def __init__(self):
         self.celdas: list[list[str]] = []
+        self.lecturas = 0
 
     def update(self, filas, rango, value_input_option=None):
         assert rango == "A1"
@@ -28,6 +29,7 @@ class HojaFalsa:
         self.celdas.append(list(fila))
 
     def col_values(self, n):
+        self.lecturas += 1
         return [f[n - 1] for f in self.celdas if len(f) >= n and f[n - 1] != ""]
 
     def get_all_values(self):
@@ -50,8 +52,10 @@ class PlanillaFalsa:
 
     def __init__(self):
         self.hojas: dict[str, HojaFalsa] = {}
+        self.pedidos_de_hoja = 0
 
     def worksheet(self, nombre):
+        self.pedidos_de_hoja += 1
         if nombre not in self.hojas:
             raise gspread.WorksheetNotFound(nombre)
         return self.hojas[nombre]
@@ -110,3 +114,23 @@ def test_sheets_reemplaza_padron_anterior():
     almacen.guardar_padron({"25340493": Socio((2026, 9), True)})
     almacen._padron = None  # forzar lectura desde la hoja
     assert almacen.cargar_padron() == {"25340493": Socio((2026, 9), True)}
+
+
+def test_sheets_una_sola_escritura_por_inscripcion():
+    planilla = PlanillaFalsa()
+    almacen = AlmacenSheets(planilla)
+    for i, dni in enumerate(["30123456", "25340493", "40111222"]):
+        assert not almacen.ya_participa(dni)
+        almacen.guardar_participante({**DATOS, "dni": dni}, Socio((2026, 10), False))
+        assert almacen.ya_participa(dni)
+    hoja = planilla.hojas["Participantes"]
+    assert hoja.lecturas == 1  # los DNIs anotados se leen una vez y se mantienen en memoria
+    assert planilla.pedidos_de_hoja <= 2  # la hoja se busca una sola vez
+    assert len(hoja.celdas) == 4
+
+
+def test_sheets_ve_anotados_cargados_por_otra_instancia(monkeypatch):
+    planilla = PlanillaFalsa()
+    AlmacenSheets(planilla).guardar_participante(DATOS, Socio((2026, 10), False))
+    otro = AlmacenSheets(planilla)
+    assert otro.ya_participa("30123456")
